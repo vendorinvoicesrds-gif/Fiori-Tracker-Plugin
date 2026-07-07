@@ -32,7 +32,7 @@ sap.ui.define([
                 }
             );
 
-
+            this._processingApps = {};
 
             this.setModel(oModel);
 
@@ -44,6 +44,40 @@ sap.ui.define([
             this._lastLaunchTime = 0;
 
             this._attachListeners();
+
+            var iPayload = {
+                app_id: "",
+                tile_id: "",
+                semantic_object: "",
+                action_name: "LOGIN",
+                intent_hash: "",
+                event_type: "LOGIN",
+                device_type: this._device(),
+                browser: this._browser(),
+                session_id: this._session(),
+                app_title: "Test App"
+            };
+
+            oModel.create(
+                "/" + ENTITY,
+                iPayload,
+                {
+                    async: true,
+
+                    success: function () {
+                        console.log("Login Entry Successfully Created");
+                        resolve();
+                    },
+
+                    error: function (oError) {
+                        console.error(
+                            "Login Entry Creation Failed",
+                            oError
+                        );
+                        resolve();
+                    }
+                }
+            );
         },
 
         // ── Event listener with Container readiness guard ──────────────────────
@@ -138,6 +172,9 @@ sap.ui.define([
 
 
             var sHash = window.location.hash;
+
+            var sKey = window.location.hash;
+
 
             if (
                 this._lastIntentHash === sHash &&
@@ -285,15 +322,16 @@ sap.ui.define([
             } else {
                 // Fall back: resolve via CSTR from the semantic object + action
                 self._resolveAppIdFromIntent(oIntent, function (sResolvedId, sTileId) {
-                    self._buildAndPost(sAppTitle, sTileId, oIntent, oApp);
+                    self._buildAndPost(sRegistrationId, sTileId, oIntent, oApp, sAppTitle);
                 });
             }
         },
 
         // ── Build payload and POST ─────────────────────────────────────────────
-        _buildAndPost: function (sAppId, sTileId, oIntent, oApp) {
+        _buildAndPost: function (sAppId, sTileId, oIntent, oApp, sAppTitle) {
+            if (oIntent.semanticObject == "z_fiori_tracker_app") { return; }
             this._postOData({
-                app_id: sAppId,
+                app_id: sAppId || oIntent.semanticObject,
                 tile_id: sTileId,
                 semantic_object: oIntent.semanticObject,
                 action_name: oIntent.action,
@@ -301,7 +339,8 @@ sap.ui.define([
                 event_type: "APP_LAUNCH",
                 device_type: this._device(),
                 browser: this._browser(),
-                session_id: this._session()
+                session_id: this._session(),
+                app_title: sAppTitle
             });
         },
 
